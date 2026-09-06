@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leva Zhoski AI — видео консоль</title>
+<style>
+  :root{
+    --bg:#17160f;
+    --bg-2:#1c1b13;
+    --panel:#201f17;
+    --panel-2:#2a2820;
+    --border:#3a3830;
+    --border-soft:#2c2a22;
+    --text:#f3efe4;
+    --muted:#9c9686;
+    --muted-2:#726c5e;
+    --accent:#e0973f;
+    --accent-2:#c97a2e;
+    --rec:#ff4d4d;
+    --good:#6fcf97;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #2a2114 0%, transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, #241d13 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    line-height:1.5;
+  }
+  a{color:inherit;}
+  .app{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+
+  .topbar{display:flex;flex-direction:column;gap:4px;margin-bottom:26px;padding-bottom:20px;border-bottom:1px solid var(--border-soft);}
+  .logo{display:flex;align-items:baseline;gap:10px;}
+  .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(224,151,63,0.15);flex-shrink:0;position:relative;top:-2px;}
+  .logo h1{font-size:26px;margin:0;font-weight:650;letter-spacing:-0.01em;}
+  .logo h1 .brand-ai{color:var(--accent);}
+  .tagline{color:var(--muted);font-size:14px;margin:0;}
+
+  .layout{display:grid;grid-template-columns:1fr;gap:20px;}
+  @media (min-width:900px){
+    .layout{grid-template-columns:minmax(300px,340px) 1fr;align-items:start;}
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border-soft);
+    border-radius:14px;
+    padding:20px;
+  }
+  .card + .card{margin-top:20px;}
+
+  .section-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:650;margin:0 0 16px;}
+  .section-title .mark{width:6px;height:6px;background:var(--accent);border-radius:1px;flex-shrink:0;}
+
+  label{display:block;font-size:12.5px;color:var(--muted);margin:14px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input[type="text"], textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:8px;
+    padding:9px 11px;
+    font-size:13.5px;
+    font-family:var(--sans);
+    outline:none;
+    transition:border-color .15s ease;
+  }
+  input[type="text"]:focus, textarea:focus{border-color:var(--accent);}
+  textarea{font-family:var(--mono);font-size:12px;resize:vertical;min-height:130px;line-height:1.5;}
+  ::placeholder{color:var(--muted-2);}
+
+  .hint{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.6;}
+  .hint code{background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:11px;color:var(--accent);}
+
+  details.advanced{margin-top:14px;border-top:1px dashed var(--border-soft);padding-top:12px;}
+  details.advanced summary{cursor:pointer;font-size:12.5px;color:var(--muted);list-style:none;}
+  details.advanced summary::-webkit-details-marker{display:none;}
+  details.advanced summary:before{content:"▸ ";color:var(--accent);}
+  details.advanced[open] summary:before{content:"▾ ";}
+
+  .row{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}
+
+  .btn{
+    appearance:none;border:none;cursor:pointer;
+    font-family:var(--sans);font-size:13.5px;font-weight:600;
+    padding:10px 16px;border-radius:8px;
+    transition:transform .1s ease, opacity .15s ease, background .15s ease;
+  }
+  .btn:active{transform:scale(0.98);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#1a1305;}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.07);}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--accent);}
+  .btn-block{width:100%;padding:13px 16px;font-size:14.5px;}
+
+  .conn-status{font-size:12.5px;color:var(--muted);}
+  .conn-status.ok{color:var(--good);}
+  .conn-status.fail{color:var(--rec);}
+
+  .notice{margin-top:16px;font-size:12px;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:6px;padding:10px 12px;line-height:1.6;}
+  .notice code{font-family:var(--mono);color:var(--accent);}
+
+  .toggle-group{display:flex;gap:8px;}
+  .toggle-btn{
+    flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);
+    background:var(--panel-2);color:var(--muted);font-family:var(--mono);font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .15s ease;
+  }
+  .toggle-btn.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#1a1305;border-color:transparent;}
+
+  .duration-row{display:flex;align-items:center;gap:12px;}
+  input[type="range"]{
+    flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--border);outline:none;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid #1a1305;
+  }
+  input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid #1a1305;}
+  .timecode{font-family:var(--mono);font-size:13.5px;color:var(--accent);min-width:52px;text-align:right;}
+
+  .dropzone{
+    margin-top:8px;position:relative;border:1.5px dashed var(--border);border-radius:10px;
+    padding:18px;text-align:center;cursor:pointer;transition:all .15s ease;
+    display:flex;align-items:center;justify-content:center;min-height:120px;background:var(--panel-2);
+  }
+  .dropzone.drag{border-color:var(--accent);background:rgba(224,151,63,0.06);}
+  .dropzone p{margin:0;font-size:12.5px;color:var(--muted);}
+  .dropzone img{max-width:100%;max-height:200px;border-radius:6px;display:block;}
+  .remove-img{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+  .stage-card{padding:22px;}
+  .stage-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .stage-status{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted-2);flex-shrink:0;}
+  .status-dot.pulse-amber{background:var(--accent);box-shadow:0 0 0 0 rgba(224,151,63,.6);animation:pulse-a 1.4s infinite;}
+  .status-dot.pulse-red{background:var(--rec);box-shadow:0 0 0 0 rgba(255,77,77,.6);animation:pulse-r 1.1s infinite;}
+  .status-dot.done{background:var(--good);}
+  .status-dot.err{background:var(--rec);}
+  @keyframes pulse-a{0%{box-shadow:0 0 0 0 rgba(224,151,63,.5);}70%{box-shadow:0 0 0 8px rgba(224,151,63,0);}100%{box-shadow:0 0 0 0 rgba(224,151,63,0);}}
+  @keyframes pulse-r{0%{box-shadow:0 0 0 0 rgba(255,77,77,.55);}70%{box-shadow:0 0 0 9px rgba(255,77,77,0);}100%{box-shadow:0 0 0 0 rgba(255,77,77,0);}}
+
+  .stage-frame{
+    position:relative;background:#0e0d09;border-radius:10px;overflow:hidden;
+    aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;
+    transition:aspect-ratio .2s ease;
+  }
+  .stage-frame .bracket{position:absolute;width:22px;height:22px;border-color:var(--accent);opacity:.55;}
+  .stage-frame .bracket.tl{top:10px;left:10px;border-top:2px solid;border-left:2px solid;}
+  .stage-frame .bracket.tr{top:10px;right:10px;border-top:2px solid;border-right:2px solid;}
+  .stage-frame .bracket.bl{bottom:10px;left:10px;border-bottom:2px solid;border-left:2px solid;}
+  .stage-frame .bracket.br{bottom:10px;right:10px;border-bottom:2px solid;border-right:2px solid;}
+  .stage-placeholder{color:var(--muted-2);font-size:13px;text-align:center;padding:20px;}
+  .stage-frame video{width:100%;height:100%;object-fit:contain;background:#000;}
+
+  .progress-track{margin-top:14px;height:3px;border-radius:2px;background:var(--border-soft);overflow:hidden;display:none;}
+  .progress-track.on{display:block;}
+  .progress-fill{width:40%;height:100%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:sweep 1.3s infinite linear;}
+  @keyframes sweep{0%{transform:translateX(-120%);}100%{transform:translateX(320%);}}
+
+  .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  .meta-chips{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .chip{font-family:var(--mono);font-size:11.5px;color:var(--muted);background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;}
+
+  .error-box{margin-top:14px;background:rgba(255,77,77,0.07);border:1px solid rgba(255,77,77,0.35);color:#ffb3b3;font-family:var(--mono);font-size:11.5px;border-radius:8px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto;display:none;}
+
+  footer{margin-top:30px;color:var(--muted-2);font-size:11.5px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="logo">
+      <span class="logo-dot"></span>
+      <h1>Leva Zhoski <span class="brand-ai">ai</span></h1>
+    </div>
+    <p class="tagline">Панель для локальной генерации видео через ваш сервер ComfyUI</p>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT: settings -->
+    <div class="col">
+      <div class="card" id="apiCard">
+        <p class="section-title"><span class="mark"></span>Подключение</p>
+
+        <label for="serverUrl">Адрес сервера ComfyUI</label>
+        <input type="text" id="serverUrl" value="http://127.0.0.1:8188" placeholder="http://127.0.0.1:8188">
+
+        <label for="workflowJson">Workflow (API-формат из ComfyUI)</label>
+        <textarea id="workflowJson" placeholder="Вставьте JSON, экспортированный из ComfyUI кнопкой &quot;Save (API Format)&quot;"></textarea>
+        <p class="hint">
+          В JSON замените нужные значения на плейсхолдеры: <code>{{WIDTH}}</code>, <code>{{HEIGHT}}</code>, <code>{{IMAGE}}</code>, <code>{{SEED}}</code>.
+          Для длительности используйте тот, что подходит вашему узлу: <code>{{DURATION_SEC}}</code>, <code>{{FRAMES_16FPS}}</code>, <code>{{FRAMES_24FPS}}</code>, <code>{{FRAMES_25FPS}}</code>, <code>{{FRAMES_30FPS}}</code>.
+          Числовые поля — без кавычек, строковые (например имя файла) — в кавычках.
+        </p>
+
+        <details class="advanced">
+          <summary>Заголовок авторизации (если сервер за прокси)</summary>
+          <label for="authHeaderName">Имя заголовка</label>
+          <input type="text" id="authHeaderName" placeholder="Authorization">
+          <label for="authHeaderValue">Значение</label>
+          <input type="text" id="authHeaderValue" placeholder="Bearer ваш_токен">
+        </details>
+
+        <div class="row">
+          <button class="btn btn-ghost" id="testConnBtn">Проверить соединение</button>
+          <span class="conn-status" id="connStatus"></span>
+        </div>
+
+        <div class="notice">
+          Запустите ComfyUI с флагом <code>--enable-cors-header</code> — без него браузер заблокирует запросы к серверу.
+          Открывайте эту страницу локально (файл или локальный сервер), а не только через GitHub Pages — иначе https-страница не сможет достучаться до http://127.0.0.1.
+        </div>
+      </div>
+
+      <div class="card" id="genCard">
+        <p class="section-title"><span class="mark"></span>Параметры видео</p>
+
+        <label>Соотношение сторон</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" data-w="1280" data-h="720">16:9</button>
+          <button class="toggle-btn" data-w="720" data-h="1280">9:16</button>
+        </div>
+
+        <label>Длительность</label>
+        <div class="duration-row">
+          <input type="range" id="durationSlider" min="1" max="20" step="1" value="5">
+          <span class="timecode" id="durationTimecode">00:05</span>
+        </div>
+
+        <label>Стартовое изображение</label>
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="imageInput" accept="image/*" hidden>
+          <img id="imagePreview" style="display:none;">
+          <p id="dropzoneText">Перетащите фото сюда или нажмите, чтобы выбрать</p>
+          <button class="remove-img" id="removeImageBtn" style="display:none;">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: stage / result -->
+    <div class="col">
+      <div class="card stage-card">
+        <div class="stage-top">
+          <p class="section-title" style="margin:0;"><span class="mark"></span>Результат</p>
+          <div class="stage-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Готово к работе</span>
+          </div>
+        </div>
+
+        <div class="stage-frame" id="stageFrame">
+          <span class="bracket tl"></span><span class="bracket tr"></span>
+          <span class="bracket bl"></span><span class="bracket br"></span>
+          <div class="stage-placeholder" id="stagePlaceholder">Здесь появится готовое видео</div>
+          <video id="resultVideo" controls style="display:none;"></video>
+        </div>
+
+        <div class="progress-track" id="progressTrack"><div class="progress-fill"></div></div>
+
+        <div class="meta-chips">
+          <span class="chip" id="chipRes">1280×720</span>
+          <span class="chip" id="chipDur">5 сек</span>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary btn-block" id="generateBtn">Сгенерировать видео</button>
+          <button class="btn btn-ghost" id="cancelBtn" style="display:none;">Отменить</button>
+          <a class="btn btn-ghost" id="downloadLink" style="display:none;" download>Скачать</a>
+        </div>
+
+        <pre class="error-box" id="errorBox"></pre>
+      </div>
+    </div>
+  </div>
+
+  <footer>Всё, что вы вводите здесь, остаётся в браузере и уходит напрямую на указанный вами сервер.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const state = {
+    ratio: { w: 1280, h: 720 },
+    duration: 5,
+    file: null,
+    cancelled: false,
+    promptId: null,
+    clientId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2))
+  };
+
+  const el = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  function getServerUrl(){
+    return el('serverUrl').value.trim().replace(/\/+$/,'');
+  }
+
+  async function fetchWithAuth(url, options){
+    options = options || {};
+    const headers = new Headers(options.headers || {});
+    const hName = el('authHeaderName').value.trim();
+    const hValue = el('authHeaderValue').value.trim();
+    if (hName && hValue) headers.set(hName, hValue);
+    return fetch(url, Object.assign({}, options, { headers }));
+  }
+
+  // ---- Aspect ratio toggle ----
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.ratio = { w: Number(btn.dataset.w), h: Number(btn.dataset.h) };
+      el('stageFrame').style.aspectRatio = state.ratio.w + '/' + state.ratio.h;
+      el('chipRes').textContent = state.ratio.w + '×' + state.ratio.h;
+    });
+  });
+
+  // ---- Duration slider ----
+  function fmtTimecode(sec){
+    const m = Math.floor(sec/60), s = sec%60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+  el('durationSlider').addEventListener('input', e => {
+    state.duration = Number(e.target.value);
+    el('durationTimecode').textContent = fmtTimecode(state.duration);
+    el('chipDur').textContent = state.duration + ' сек';
+  });
+
+  // ---- Image dropzone ----
+  const dropzone = el('dropzone');
+  function handleFile(file){
+    if (!file || !file.type.startsWith('image/')) return;
+    state.file = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      el('imagePreview').src = e.target.result;
+      el('imagePreview').style.display = 'block';
+      el('dropzoneText').style.display = 'none';
+      el('removeImageBtn').style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+  dropzone.addEventListener('click', e => { if (e.target.id !== 'removeImageBtn') el('imageInput').click(); });
+  el('imageInput').addEventListener('change', e => handleFile(e.target.files[0]));
+  ['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+  dropzone.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+  el('removeImageBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    state.file = null;
+    el('imageInput').value = '';
+    el('imagePreview').style.display = 'none';
+    el('dropzoneText').style.display = 'block';
+    el('removeImageBtn').style.display = 'none';
+  });
+
+  // ---- Connection test ----
+  el('testConnBtn').addEventListener('click', async () => {
+    const status = el('connStatus');
+    status.className = 'conn-status';
+    status.textContent = 'Проверка…';
+    try {
+      const res = await fetchWithAuth(getServerUrl() + '/system_stats');
+      if (!res.ok) throw new Error(String(res.status));
+      status.className = 'conn-status ok';
+      status.textContent = 'Подключено ✓';
+    } catch(err){
+      status.className = 'conn-status fail';
+      status.textContent = 'Не удалось подключиться — проверьте адрес, CORS и что ComfyUI запущен';
+    }
+  });
+
+  // ---- Status helpers ----
+  function setStatus(kind, text){
+    const dot = el('statusDot');
+    dot.className = 'status-dot';
+    if (kind === 'amber') dot.classList.add('pulse-amber');
+    if (kind === 'red') dot.classList.add('pulse-red');
+    if (kind === 'done') dot.classList.add('done');
+    if (kind === 'err') dot.classList.add('err');
+    el('statusText').textContent = text;
+  }
+  function showError(err){
+    const box = el('errorBox');
+    box.style.display = 'block';
+    box.textContent = (err && err.message) ? err.message : String(err);
+  }
+  function clearError(){
+    const box = el('errorBox');
+    box.style.display = 'none';
+    box.textContent = '';
+  }
+  function toggleBusy(isBusy){
+    el('generateBtn').disabled = isBusy;
+    el('cancelBtn').style.display = isBusy ? 'inline-block' : 'none';
+    el('progressTrack').classList.toggle('on', isBusy);
+  }
+
+  // ---- Workflow build ----
+  function buildWorkflow(uploadedName){
+    let raw = el('workflowJson').value.trim();
+    if (!raw) throw new Error('Вставьте JSON workflow в поле выше.');
+    const seed = Math.floor(Math.random() * 1e15);
+    const dur = state.duration;
+    const map = {
+      '{{WIDTH}}': state.ratio.w,
+      '{{HEIGHT}}': state.ratio.h,
+      '{{IMAGE}}': uploadedName,
+      '{{SEED}}': seed,
+      '{{DURATION_SEC}}': dur,
+      '{{FRAMES_16FPS}}': Math.round(dur * 16),
+      '{{FRAMES_24FPS}}': Math.round(dur * 24),
+      '{{FRAMES_25FPS}}': Math.round(dur * 25),
+      '{{FRAMES_30FPS}}': Math.round(dur * 30)
+    };
+    for (const token in map) raw = raw.split(token).join(map[token]);
+    try {
+      return JSON.parse(raw);
+    } catch(e){
+      throw new Error('Workflow JSON некорректен после подстановки значений: ' + e.message);
+    }
+  }
+
+  async function uploadImage(serverUrl, file){
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('overwrite', 'true');
+    const res = await fetchWithAuth(serverUrl + '/upload/image', { method:'POST', body: fd });
+    if (!res.ok) throw new Error('Не удалось загрузить изображение (код ' + res.status + ')');
+    const data = await res.json();
+    return data.name;
+  }
+
+  function formatComfyError(data){
+    if (!data) return null;
+    if (data.error && data.error.message){
+      let msg = data.error.message;
+      if (data.node_errors && Object.keys(data.node_errors).length) msg += '\n' + JSON.stringify(data.node_errors, null, 2);
+      return msg;
+    }
+    return null;
+  }
+
+  async function queuePrompt(serverUrl, workflow){
+    const res = await fetchWithAuth(serverUrl + '/prompt', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt: workflow, client_id: state.clientId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error){
+      throw new Error(formatComfyError(data) || ('Сервер вернул ошибку ' + res.status));
+    }
+    return data.prompt_id;
+  }
+
+  async function waitForResult(serverUrl, promptId){
+    let attempts = 0;
+    const maxAttempts = 600; // ~15 минут при интервале 1.5с
+    while (attempts < maxAttempts){
+      if (state.cancelled) throw new Error('Генерация отменена.');
+      attempts++;
+
+      try {
+        const qRes = await fetchWithAuth(serverUrl + '/queue');
+        if (qRes.ok){
+          const q = await qRes.json();
+          const running = (q.queue_running || []).some(item => item[1] === promptId);
+          const idx = (q.queue_pending || []).findIndex(item => item[1] === promptId);
+          if (running) setStatus('red', 'Идёт генерация…');
+          else if (idx >= 0) setStatus('amber', 'В очереди: позиция ' + (idx+1));
+        }
+      } catch(e){ /* сеть могла моргнуть — не прерываем цикл */ }
+
+      const hRes = await fetchWithAuth(serverUrl + '/history/' + promptId);
+      if (hRes.ok){
+        const hist = await hRes.json();
+        const entry = hist[promptId];
+        if (entry){
+          if (entry.status && entry.status.status_str === 'error'){
+            throw new Error('Ошибка при генерации:\n' + JSON.stringify(entry.status.messages || entry.status, null, 2));
+          }
+          if (entry.outputs && Object.keys(entry.outputs).length){
+            return entry;
+          }
+        }
+      }
+      await sleep(1500);
+    }
+    throw new Error('Превышено время ожидания результата.');
+  }
+
+  function findVideoUrl(serverUrl, entry){
+    const exts = ['.mp4','.webm','.mov','.mkv','.avi','.gif'];
+    for (const nodeOut of Object.values(entry.outputs)){
+      for (const key in nodeOut){
+        const arr = nodeOut[key];
+        if (Array.isArray(arr)){
+          for (const item of arr){
+            if (item && item.filename && exts.some(ext => item.filename.toLowerCase().endsWith(ext))){
+              const params = new URLSearchParams({ filename: item.filename, subfolder: item.subfolder || '', type: item.type || 'output' });
+              return serverUrl + '/view?' + params.toString();
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function showVideo(url){
+    el('stagePlaceholder').style.display = 'none';
+    const video = el('resultVideo');
+    video.src = url;
+    video.style.display = 'block';
+    const dl = el('downloadLink');
+    dl.href = url;
+    dl.style.display = 'inline-block';
+  }
+
+  function validate(){
+    if (!getServerUrl()) { showError(new Error('Укажите адрес сервера ComfyUI.')); return false; }
+    if (!state.file) { showError(new Error('Загрузите стартовое изображение.')); return false; }
+    if (!el('workflowJson').value.trim()) { showError(new Error('Вставьте JSON workflow.')); return false; }
+    return true;
+  }
+
+  async function generate(){
+    clearError();
+    if (!validate()) return;
+    state.cancelled = false;
+    toggleBusy(true);
+    el('resultVideo').style.display = 'none';
+    el('downloadLink').style.display = 'none';
+    el('stagePlaceholder').style.display = 'block';
+    el('stagePlaceholder').textContent = 'Здесь появится готовое видео';
+    try {
+      const serverUrl = getServerUrl();
+      setStatus('amber', 'Загрузка изображения…');
+      const uploadedName = await uploadImage(serverUrl, state.file);
+      setStatus('amber', 'Подготовка workflow…');
+      const workflow = buildWorkflow(uploadedName);
+      setStatus('amber', 'Отправка в очередь…');
+      const promptId = await queuePrompt(serverUrl, workflow);
+      state.promptId = promptId;
+      setStatus('amber', 'В очереди…');
+      const entry = await waitForResult(serverUrl, promptId);
+      const videoUrl = findVideoUrl(serverUrl, entry);
+      if (!videoUrl) throw new Error('Видео не найдено в результате. Убедитесь, что workflow сохраняет видеофайл (например через узел сохранения видео).');
+      showVideo(videoUrl);
+      setStatus('done', 'Готово');
+    } catch(err){
+      showError(err);
+      setStatus('err', 'Ошибка');
+    } finally {
+      toggleBusy(false);
+    }
+  }
+
+  el('generateBtn').addEventListener('click', generate);
+  el('cancelBtn').addEventListener('click', async () => {
+    state.cancelled = true;
+    try { await fetchWithAuth(getServerUrl() + '/interrupt', { method:'POST' }); } catch(e){}
+    setStatus('err', 'Отменено');
+  });
+
+})();
+</script>
+</body>
+</html>
